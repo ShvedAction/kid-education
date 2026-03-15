@@ -96,6 +96,11 @@ describe('PairSyllable task', () => {
             expect(store.getState().pairSyllable.letters.length).toBe(2);
           });
         });
+        await act(async () => {
+          await waitFor(() => {
+            expect(mockTTS.speak).toHaveBeenCalledWith('ма', expect.any(Object));
+          });
+        });
       });
 
       it('should form one pair and speak syllable', () => {

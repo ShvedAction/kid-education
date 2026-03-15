@@ -1,8 +1,9 @@
 import type { TTSProvider } from '@/domain/tts';
 
-/** Контекст для саг (TTS и вызов следующего раунда без циклического импорта). */
+/** Контекст для саг (TTS, store; dispatchNextRound — для story mode). */
 export interface SagaContext {
   tts: TTSProvider;
   store: { dispatch: (action: unknown) => unknown };
-  dispatchNextRound: () => void;
+  /** Для story/тестов: вызов следующего раунда по session.taskType/difficulty. */
+  dispatchNextRound?: () => void;
 }

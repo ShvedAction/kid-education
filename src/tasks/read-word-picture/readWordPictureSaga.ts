@@ -1,12 +1,13 @@
-import { call, put, select, takeLatest } from 'redux-saga/effects';
+import { call, put, select, take } from 'redux-saga/effects';
 import { SYLLABLE_RATE } from '@/domain/tts';
 import type { SagaContext } from '@/store/sagaContext';
 import type { ReadWordPictureRound } from '@/domain/types';
+import { sessionSlice } from '@/store/sessionSlice';
 import { readWordPictureSlice } from './readWordPictureSlice';
 
 const INSTRUCTION = 'Прочитай слово и выбери картинку';
 
-function* playInstruction(_action: unknown, context: SagaContext) {
+function* playInstruction(context: SagaContext) {
   const { tts } = context;
   const state: {
     session: { currentRound: ReadWordPictureRound | null };
@@ -21,12 +22,8 @@ function* playInstruction(_action: unknown, context: SagaContext) {
   }
 }
 
-function* playPart(
-  action: ReturnType<typeof readWordPictureSlice.actions.readPart>,
-  context: SagaContext
-) {
+function* playPart(part: string, context: SagaContext) {
   const { tts } = context;
-  const part = action.payload;
   try {
     yield call([tts, tts.speak], part.toLowerCase(), { rate: SYLLABLE_RATE });
   } catch {
@@ -34,17 +31,13 @@ function* playPart(
   }
 }
 
-function* playWrongFeedback(
-  action: ReturnType<typeof readWordPictureSlice.actions.chooseWrong>,
-  context: SagaContext
-) {
+function* playWrongFeedback(chosenId: string, context: SagaContext) {
   const { tts } = context;
   const state: {
     session: { currentRound: ReadWordPictureRound | null };
   } = yield select();
   const round = state.session.currentRound;
   if (round?.type !== 'readWordPicture') return;
-  const chosenId = action.payload;
   const chosen = round.options.find((o) => o.id === chosenId);
   try {
     yield call([tts, tts.speak], 'Нет. Выбери картинку к слову.');
@@ -59,48 +52,33 @@ function* playWrongFeedback(
   }
 }
 
-function* playCorrectAndNextRound(_action: unknown, context: SagaContext) {
-  const { tts, dispatchNextRound } = context;
-  try {
-    yield call([tts, tts.speak], 'Правильно');
-  } catch {
-    // ignore
-  }
-  dispatchNextRound();
-}
-
 /**
- * Сага задания «Прочитай слово и выбери картинку».
- *
- * @remarks
- * - startRound — озвучивает инструкцию, диспатчит instructionDone.
- * - readPart(part) — озвучивает только выбранный слог (часть слова).
- * - chooseWrong — озвучивает фидбек, диспатчит wrongDone.
- * - chooseCorrect — озвучивает «Правильно», dispatchNextRound().
+ * Сага «один раунд» задания «Прочитай слово и выбери картинку».
+ * В цикле обрабатывает readPart (озвучка части), chooseWrong, chooseCorrect.
  */
-export function* readWordPictureSaga(context: SagaContext) {
-  yield takeLatest(
-    readWordPictureSlice.actions.startRound.type as never,
-    function* (a: unknown) {
-      yield* playInstruction(a, context);
+export function* runReadWordPictureRound(context: SagaContext) {
+  yield take(readWordPictureSlice.actions.startRound.type);
+  yield* playInstruction(context);
+
+  while (true) {
+    const action: { type: string; payload?: string } = yield take([
+      readWordPictureSlice.actions.chooseCorrect.type,
+      readWordPictureSlice.actions.chooseWrong.type,
+      readWordPictureSlice.actions.readPart.type,
+    ]);
+    if (action.type === readWordPictureSlice.actions.readPart.type) {
+      yield* playPart(action.payload!, context);
+      continue;
     }
-  );
-  yield takeLatest(
-    readWordPictureSlice.actions.readPart.type as never,
-    function* (a: ReturnType<typeof readWordPictureSlice.actions.readPart>) {
-      yield* playPart(a, context);
+    if (action.type === readWordPictureSlice.actions.chooseCorrect.type) {
+      try {
+        yield call([context.tts, context.tts.speak], 'Правильно');
+      } catch {
+        // ignore
+      }
+      yield put(sessionSlice.actions.roundFinished({ correct: true }));
+      return;
     }
-  );
-  yield takeLatest(
-    readWordPictureSlice.actions.chooseWrong.type as never,
-    function* (a: ReturnType<typeof readWordPictureSlice.actions.chooseWrong>) {
-      yield* playWrongFeedback(a, context);
-    }
-  );
-  yield takeLatest(
-    readWordPictureSlice.actions.chooseCorrect.type as never,
-    function* (a: unknown) {
-      yield* playCorrectAndNextRound(a, context);
-    }
-  );
+    yield* playWrongFeedback(action.payload!, context);
+  }
 }

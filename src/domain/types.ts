@@ -79,3 +79,15 @@ export type Round =
 export type AttemptResult =
   | { kind: 'correct' }
   | { kind: 'wrong'; chosen: Syllable };
+
+/** Результат завершённого раунда (для стратегий). */
+export interface RoundResult {
+  correct: boolean;
+  attempts?: number;
+}
+
+/** Спецификация следующего раунда (что запрашивает стратегия). */
+export interface RoundSpec {
+  taskType: TaskType;
+  difficulty?: DifficultyLevel;
+}

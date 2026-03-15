@@ -4,14 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import createSagaMiddleware from 'redux-saga';
 import type { UnknownAction } from '@reduxjs/toolkit';
 import type { ThunkAction } from '@reduxjs/toolkit';
-import type { Round, TaskType, DifficultyLevel } from '@/domain/types';
-import {
-  createPickSyllableRound,
-  createComposeSyllableRound,
-} from '@/domain/rounds';
-import { createClassifyLetterRound } from '@/tasks/classify-letter/rounds';
-import { createPairSyllableRound } from '@/tasks/pair-syllable/rounds';
-import { createReadWordPictureRound } from '@/tasks/read-word-picture/rounds';
+import { createRound } from './createRound';
 import { sessionSlice } from './sessionSlice';
 import { pickSyllableSlice } from '@/tasks/pick-syllable/pickSyllableSlice';
 import { composeSyllableSlice } from '@/tasks/compose-syllable/composeSyllableSlice';
@@ -20,22 +13,9 @@ import { pairSyllableSlice } from '@/tasks/pair-syllable';
 import { readWordPictureSlice } from '@/tasks/read-word-picture';
 import { rootSaga } from './sagas/rootSaga';
 import type { TTSProvider } from '@/domain/tts';
+import { simpleStrategy } from '@/strategies/simple-scenario';
 
-function createRound(taskType: TaskType, difficulty: DifficultyLevel): Round {
-  if (taskType === 'pickSyllable') {
-    return createPickSyllableRound(difficulty);
-  }
-  if (taskType === 'classifyLetter') {
-    return createClassifyLetterRound();
-  }
-  if (taskType === 'pairSyllable') {
-    return createPairSyllableRound();
-  }
-  if (taskType === 'readWordPicture') {
-    return createReadWordPictureRound();
-  }
-  return createComposeSyllableRound();
-}
+export { createRound } from './createRound';
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -70,6 +50,7 @@ export function createStoreForStory(tts: TTSProvider) {
   storySagaMiddleware.run(rootSaga, {
     tts,
     store: storyStore,
+    mode: 'story',
     dispatchNextRound: () => storyStore.dispatch(nextRound()),
   });
   return storyStore;
@@ -79,10 +60,10 @@ export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 export type AppThunk = ThunkAction<void, RootState, unknown, UnknownAction>;
 
-/** Thunk: создать новый раунд и сбросить состояние задания */
+/** Thunk: создать новый раунд по session.taskType/difficulty (для story runner). */
 export const nextRound = (): AppThunk => (dispatch, getState) => {
   const { taskType, difficulty } = getState().session;
-  const round = createRound(taskType, difficulty);
+  const round = createRound({ taskType, difficulty });
   dispatch(sessionSlice.actions.setRound(round));
   if (round.type === 'pickSyllable') {
     dispatch(pickSyllableSlice.actions.reset(round));
@@ -97,12 +78,12 @@ export const nextRound = (): AppThunk => (dispatch, getState) => {
   }
 };
 
-/** Запуск саг (передать TTS после создания store). */
+/** Запуск саг (передать TTS после создания store). Использует simpleStrategy. */
 export function runSagas(tts: TTSProvider) {
   sagaMiddleware.run(rootSaga, {
     tts,
     store,
-    dispatchNextRound: () => store.dispatch(nextRound()),
+    strategy: simpleStrategy(),
   });
 }
 

@@ -1,6 +1,11 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Round, TaskType, DifficultyLevel } from '@/domain/types';
+import type {
+  Round,
+  TaskType,
+  DifficultyLevel,
+  RoundResult,
+} from '@/domain/types';
 
 export interface SessionState {
   taskType: TaskType;
@@ -30,7 +35,12 @@ export const sessionSlice = createSlice({
       state.currentRound = action.payload;
       state.roundKey += 1;
     },
+    /** Диспатчат саги заданий по завершении раунда. Обрабатывает strategy/story runner. */
+    roundFinished(_state, _action: PayloadAction<RoundResult>) {
+      // no state change; runner listens and sets next round
+    },
   },
 });
 
-export const { setTaskType, setDifficulty, setRound } = sessionSlice.actions;
+export const { setTaskType, setDifficulty, setRound, roundFinished } =
+  sessionSlice.actions;

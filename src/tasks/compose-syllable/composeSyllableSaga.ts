@@ -1,11 +1,12 @@
-import { call, put, select, takeLatest } from 'redux-saga/effects';
+import { call, put, select, take } from 'redux-saga/effects';
 import { SYLLABLE_RATE } from '@/domain/tts';
 import type { SagaContext } from '@/store/sagaContext';
+import { sessionSlice } from '@/store/sessionSlice';
 import { composeSyllableSlice } from './composeSyllableSlice';
 
 const PHRASE = 'Собери слог';
 
-function* playInstruction(_action: unknown, context: SagaContext) {
+function* playInstruction(context: SagaContext) {
   const { tts } = context;
   const state: {
     session: { currentRound: { type: string; target: string } | null };
@@ -22,26 +23,15 @@ function* playInstruction(_action: unknown, context: SagaContext) {
   }
 }
 
-function* playCorrectAndNextRound(_action: unknown, context: SagaContext) {
-  const { tts, dispatchNextRound } = context;
-  try {
-    yield call([tts, tts.speak], 'Правильно! Молодец!');
-  } catch {
-    // ignore
-  }
-  dispatchNextRound();
-}
-
 function* playWrongFeedback(
-  action: ReturnType<typeof composeSyllableSlice.actions.chooseWrong>,
+  composed: string,
   context: SagaContext
 ) {
   const { tts } = context;
-  const composed = action.payload.toLowerCase();
   try {
     yield call(
       [tts, tts.speak],
-      `Это слог ${composed}. Попробуй ещё раз.`
+      `Это слог ${composed.toLowerCase()}. Попробуй ещё раз.`
     );
   } catch {
     // ignore
@@ -63,33 +53,26 @@ function* playWrongFeedback(
 }
 
 /**
- * Сага задания «Собери слог».
- *
- * @remarks
- * Слушает экшены slice:
- * - startRound — озвучивает «Собери слог» и целевой слог, диспатчит instructionDone.
- * - chooseCorrect — озвучивает «Правильно! Молодец!», вызывает dispatchNextRound().
- * - chooseWrong — озвучивает фидбек по собранному слогу, диспатчит wrongDone.
- *
- * @param context — TTS, store, dispatchNextRound (см. SagaContext)
+ * Сага «один раунд» задания «Собери слог».
  */
-export function* composeSyllableSaga(context: SagaContext) {
-  yield takeLatest(
-    composeSyllableSlice.actions.startRound.type as never,
-    function* (a: unknown) {
-      yield* playInstruction(a, context);
+export function* runComposeSyllableRound(context: SagaContext) {
+  yield take(composeSyllableSlice.actions.startRound.type);
+  yield* playInstruction(context);
+
+  while (true) {
+    const action: { type: string; payload?: string } = yield take([
+      composeSyllableSlice.actions.chooseCorrect.type,
+      composeSyllableSlice.actions.chooseWrong.type,
+    ]);
+    if (action.type === composeSyllableSlice.actions.chooseCorrect.type) {
+      try {
+        yield call([context.tts, context.tts.speak], 'Правильно! Молодец!');
+      } catch {
+        // ignore
+      }
+      yield put(sessionSlice.actions.roundFinished({ correct: true }));
+      return;
     }
-  );
-  yield takeLatest(
-    composeSyllableSlice.actions.chooseCorrect.type as never,
-    function* (a: unknown) {
-      yield* playCorrectAndNextRound(a, context);
-    }
-  );
-  yield takeLatest(
-    composeSyllableSlice.actions.chooseWrong.type as never,
-    function* (a: ReturnType<typeof composeSyllableSlice.actions.chooseWrong>) {
-      yield* playWrongFeedback(a, context);
-    }
-  );
+    yield* playWrongFeedback(action.payload!, context);
+  }
 }
