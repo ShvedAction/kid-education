@@ -1,23 +1,33 @@
-import type { RoundResult, RoundSpec } from '@/domain/types';
+import type { Round, RoundResult } from '@/domain/types';
+
 
 /**
- * Простая стратегия: заранее заданная последовательность с ветвлением по правильности.
- * Первый раунд — «выбери слог» (4 варианта). После correct — «собери слог», после wrong — снова «выбери слог» (3 варианта).
- * Далее цикл повторяется.
+ * Простая стратегия: фиксированная последовательность раундов в обход createRound.
+ * Порядок: classifyLetter (буквы) → pairSyllable (слоги) → composeSyllable (собери НА) → повтор.
  */
 export function* simpleStrategy(): Generator<
-  RoundSpec | undefined,
+  Round | undefined,
   void,
   RoundResult | undefined
 > {
-  yield { taskType: 'pickSyllable', difficulty: 4 };
-
   while (true) {
-    const result = yield;
-    if (result?.correct) {
-      yield { taskType: 'composeSyllable' };
-    } else {
-      yield { taskType: 'pickSyllable', difficulty: 3 };
-    }
+
+    yield {
+      type: 'classifyLetter',
+      letters: ['А', 'О', 'У', 'Н', 'К', 'М', 'П', 'С', 'Т'],
+    };
+
+    yield; // receive result
+    yield {
+      type: 'pairSyllable',
+      source_syllables: ['НА', 'НО', 'ПА', 'ПО', 'СА', 'СО', 'ТА', 'ТО'],
+    };
+    yield; // receive result
+    yield {
+      type: 'composeSyllable',
+      target: 'НА',
+      letters: ['Н', 'О', 'А'],
+    };
+    yield; // receive result
   }
 }

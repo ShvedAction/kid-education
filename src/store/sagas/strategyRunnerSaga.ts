@@ -1,6 +1,5 @@
 import { fork, put, take } from 'redux-saga/effects';
-import type { RoundResult } from '@/domain/types';
-import { createRound } from '../createRound';
+import type { Round, RoundResult } from '@/domain/types';
 import { sessionSlice } from '../sessionSlice';
 import { pickSyllableSlice } from '@/tasks/pick-syllable/pickSyllableSlice';
 import { composeSyllableSlice } from '@/tasks/compose-syllable/composeSyllableSlice';
@@ -11,10 +10,10 @@ import { runTaskSagaForRound } from './runTaskSaga';
 import type { SagaContext } from '../sagaContext';
 
 export interface StrategyRunnerContext extends SagaContext {
-  strategy: Generator<import('@/domain/types').RoundSpec, void, RoundResult | undefined>;
+  strategy: Generator<Round | undefined, void, RoundResult | undefined>;
 }
 
-function* dispatchRoundAndReset(round: ReturnType<typeof createRound>) {
+function* dispatchRoundAndReset(round: Round) {
   yield put(sessionSlice.actions.setRound(round));
   if (round.type === 'pickSyllable') {
     yield put(pickSyllableSlice.actions.reset(round));
@@ -30,7 +29,7 @@ function* dispatchRoundAndReset(round: ReturnType<typeof createRound>) {
 }
 
 /**
- * Сага-раннер стратегии: в цикле получает спеку от стратегии, создаёт раунд,
+ * Сага-раннер стратегии: в цикле получает раунд от стратегии (в обход createRound),
  * диспатчит setRound + reset, форкает сагу задания, ждёт roundFinished, передаёт результат в стратегию.
  */
 export function* strategyRunnerSaga(context: StrategyRunnerContext) {
@@ -39,9 +38,8 @@ export function* strategyRunnerSaga(context: StrategyRunnerContext) {
   let step = strategy.next();
   if (step.done || step.value === undefined) return;
 
-  let spec = step.value;
-  while (spec !== undefined) {
-    const round = createRound(spec);
+  let round = step.value;
+  while (round !== undefined) {
     yield* dispatchRoundAndReset(round);
     yield fork(runTaskSagaForRound, round.type, context);
     const action: { payload: RoundResult } = yield take(sessionSlice.actions.roundFinished.type);
@@ -50,6 +48,6 @@ export function* strategyRunnerSaga(context: StrategyRunnerContext) {
     strategy.next();
     const nextStep = strategy.next(result);
     if (nextStep.done || nextStep.value === undefined) break;
-    spec = nextStep.value;
+    round = nextStep.value;
   }
 }
