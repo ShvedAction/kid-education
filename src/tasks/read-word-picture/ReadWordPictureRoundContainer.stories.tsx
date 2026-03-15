@@ -76,3 +76,19 @@ export const WordStol: Story = {
     }),
   ],
 };
+
+export const Word1: Story = {
+  decorators: [
+    withStore({
+      type: 'readWordPicture',
+      word: 'МАТ',
+      correctId: 'mat',
+      options: [
+        { id: 'mat', alt: 'Мат' },
+        { id: 'bal', alt: 'Бал' },
+        { id: 'bot', alt: 'Бот' },
+        { id: 'vata', alt: 'Вата' },
+      ],
+    }),
+  ],
+};
