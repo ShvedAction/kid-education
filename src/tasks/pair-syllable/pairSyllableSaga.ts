@@ -24,7 +24,11 @@ function* playInstruction(context: SagaContext) {
  * Раунд заканчивается на chooseCorrect (фаза «найди слог»).
  */
 export function* runPairSyllableRound(context: SagaContext) {
-  yield take(pairSyllableSlice.actions.startRound.type);
+  if (!context.autostart) {
+    yield take(pairSyllableSlice.actions.startRound.type);
+  }else{
+    yield put(pairSyllableSlice.actions.startRound());
+  }
   yield* playInstruction(context);
 
   while (true) {

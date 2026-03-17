@@ -57,7 +57,11 @@ function* playWrongFeedback(chosenId: string, context: SagaContext) {
  * В цикле обрабатывает readPart (озвучка части), chooseWrong, chooseCorrect.
  */
 export function* runReadWordPictureRound(context: SagaContext) {
-  yield take(readWordPictureSlice.actions.startRound.type);
+  if (!context.autostart) {
+    yield take(readWordPictureSlice.actions.startRound.type);
+  }else{
+    yield put(readWordPictureSlice.actions.startRound());
+  }
   yield* playInstruction(context);
 
   while (true) {

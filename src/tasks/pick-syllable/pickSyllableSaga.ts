@@ -49,7 +49,11 @@ function* playWrongFeedback(
  * По chooseCorrect озвучивает «Правильно» и диспатчит roundFinished({ correct: true }).
  */
 export function* runPickSyllableRound(context: SagaContext) {
-  yield take(pickSyllableSlice.actions.startRound.type);
+  if (!context.autostart) {
+    yield take(pickSyllableSlice.actions.startRound.type);
+  }else{
+    yield put(pickSyllableSlice.actions.startRound());
+  }
   yield* playInstruction(context);
 
   while (true) {

@@ -51,6 +51,7 @@ export function createStoreForStory(tts: TTSProvider) {
     tts,
     store: storyStore,
     mode: 'story',
+    autostart: false,
     dispatchNextRound: () => storyStore.dispatch(nextRound()),
   });
   return storyStore;
@@ -84,6 +85,7 @@ export function runSagas(tts: TTSProvider) {
     tts,
     store,
     strategy: simpleStrategy(),
+    autostart: true,
   });
 }
 

@@ -56,7 +56,11 @@ function* playWrongFeedback(
  * Сага «один раунд» задания «Собери слог».
  */
 export function* runComposeSyllableRound(context: SagaContext) {
-  yield take(composeSyllableSlice.actions.startRound.type);
+  if (!context.autostart) {
+    yield take(composeSyllableSlice.actions.startRound.type);
+  }else{
+    yield put(composeSyllableSlice.actions.startRound());
+  }
   yield* playInstruction(context);
 
   while (true) {
