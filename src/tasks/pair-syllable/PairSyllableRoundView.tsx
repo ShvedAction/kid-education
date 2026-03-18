@@ -231,17 +231,6 @@ export function PairSyllableRoundView({
               ))}
             </div>
           )}
-
-          {!spoken && (
-            <p className="hint" data-testid="pair-syllable-hint">
-              Слушай задание…
-            </p>
-          )}
-          {spoken && letters.length > 0 && (
-            <p className="hint" data-testid="pair-syllable-hint">
-              Поднеси гласную к согласной или согласную к гласной
-            </p>
-          )}
         </>
       )}
 

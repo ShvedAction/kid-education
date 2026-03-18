@@ -164,17 +164,6 @@ export function ClassifyLetterRoundView({
               </span>
             ))}
           </div>
-
-          {!spoken && (
-            <p className="hint" data-testid="classify-letter-hint">
-              Слушай задание…
-            </p>
-          )}
-          {spoken && pending.length > 0 && (
-            <p className="hint" data-testid="classify-letter-hint">
-              Перетащи буквы в нужную область
-            </p>
-          )}
         </>
       )}
     </div>

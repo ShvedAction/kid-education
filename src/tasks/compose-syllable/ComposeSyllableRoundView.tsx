@@ -180,11 +180,6 @@ export function ComposeSyllableRoundView({
               </span>
             ))}
           </div>
-
-          {!spoken && <p className="hint">Слушай задание…</p>}
-          {spoken && status === 'idle' && (
-            <p className="hint">Перетащи буквы в слоты по порядку</p>
-          )}
         </>
       )}
     </div>
