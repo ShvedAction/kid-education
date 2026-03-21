@@ -42,6 +42,7 @@ export function* strategyRunnerSaga(context: StrategyRunnerContext) {
   while (round !== undefined) {
     yield* dispatchRoundAndReset(round);
     yield fork(runTaskSagaForRound, round.type, context);
+    context.autostart = true;
     const action: { payload: RoundResult } = yield take(sessionSlice.actions.roundFinished.type);
     const result = action.payload;
 

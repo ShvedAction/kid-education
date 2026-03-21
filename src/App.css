@@ -83,8 +83,10 @@
 }
 
 .main {
-  max-width: 40rem;
+  /* max-width: 40rem; */
   margin: 0 auto;
+  height: 85vh;
+  width: 100%;
 }
 
 .pick-syllable-round {

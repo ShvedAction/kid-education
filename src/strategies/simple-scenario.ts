@@ -14,6 +14,65 @@ export function* simpleStrategy(): Generator<
 
     yield {
       type: 'classifyLetter',
+      letters: ['А', 'Н', ],
+    };
+
+    yield; // receive result
+    yield {
+      type: 'pairSyllable',
+      source_syllables: ['НА', 'ТО'],
+    };
+    yield; // receive result
+
+    yield {
+      type: 'composeSyllable',
+      target: 'НА',
+      letters: ['Н', 'О', 'А'],
+    };
+    yield; // receive result
+    
+
+
+    yield {
+      type: 'classifyLetter',
+      letters: ['А', 'О',  'С', 'Т'],
+    };
+
+    yield; // receive result
+    yield {
+      type: 'pairSyllable',
+      source_syllables: ['НА', 'НО', 'ТО'],
+    };
+    yield; // receive result
+    yield {
+      type: 'composeSyllable',
+      target: 'НО',
+      letters: ['Н', 'О', 'А', 'Т'],
+    };
+    yield; // receive result
+
+
+    yield {
+      type: 'classifyLetter',
+      letters: ['А', 'О', 'У', 'И', 'К',  'П', 'С', 'Т'],
+    };
+
+    yield; // receive result
+    yield {
+      type: 'pairSyllable',
+      source_syllables: ['НА', 'НО', 'ПА', 'ПО', 'ТА', 'ТО'],
+    };
+    yield; // receive result
+    yield {
+      type: 'composeSyllable',
+      target: 'СО',
+      letters: ['С', 'О', 'А', 'Н'],
+    };
+    yield; // receive result
+
+
+    yield {
+      type: 'classifyLetter',
       letters: ['А', 'О', 'У', 'Н', 'К', 'М', 'П', 'С', 'Т'],
     };
 

@@ -25,7 +25,11 @@ function* playInstruction(context: SagaContext) {
  * Раунд заканчивается, когда все буквы правильно разложены (dropInZone correct + allCorrect).
  */
 export function* runClassifyLetterRound(context: SagaContext) {
-  yield take(classifyLetterSlice.actions.startRound.type);
+  if (!context.autostart) {
+    yield take(classifyLetterSlice.actions.startRound.type);
+  }else{
+    yield put(classifyLetterSlice.actions.startRound());
+  }
   yield* playInstruction(context);
 
   while (true) {
@@ -40,7 +44,7 @@ export function* runClassifyLetterRound(context: SagaContext) {
     if (action.type === classifyLetterSlice.actions.speakLetter.type) {
       const letter = typeof action.payload === 'string' ? action.payload : '';
       try {
-        yield call([context.tts, context.tts.speak], letter);
+        yield call([context.tts, context.tts.speak], letter.toLowerCase());
       } catch {
         // ignore
       }
@@ -55,10 +59,10 @@ export function* runClassifyLetterRound(context: SagaContext) {
       const kind = isVowel(item.letter) ? 'гласная' : 'согласная';
       try {
         yield call([context.tts, context.tts.speak], 'Правильно');
-        yield call([context.tts, context.tts.speak], item.letter, {
-          rate: SYLLABLE_RATE,
-        });
-        yield call([context.tts, context.tts.speak], kind);
+        // yield call([context.tts, context.tts.speak], item.letter.toLocaleLowerCase(), {
+        //   rate: SYLLABLE_RATE,
+        // });
+        // yield call([context.tts, context.tts.speak], kind);
       } catch {
         // ignore
       }

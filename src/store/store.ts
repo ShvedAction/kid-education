@@ -85,7 +85,7 @@ export function runSagas(tts: TTSProvider) {
     tts,
     store,
     strategy: simpleStrategy(),
-    autostart: true,
+    autostart: false,
   });
 }
 
