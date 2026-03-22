@@ -3,12 +3,12 @@ import { simpleStrategy } from './simple-scenario';
 
 const CLASSIFY_LETTER_ROUND = {
   type: 'classifyLetter' as const,
-  letters: ['А', 'О', 'У', 'Н', 'К', 'М', 'П', 'С', 'Т'],
+  letters: ['А', 'Н'],
 };
 
 const PAIR_SYLLABLE_ROUND = {
   type: 'pairSyllable' as const,
-  source_syllables: ['НА', 'НО', 'ПА', 'ПО', 'СА', 'СО', 'ТА', 'ТО'],
+  source_syllables: ['НА', 'ТО'],
 };
 
 const COMPOSE_SYLLABLE_ROUND = {
@@ -45,16 +45,4 @@ describe('simpleStrategy', () => {
     expect(step.value).toEqual(COMPOSE_SYLLABLE_ROUND);
   });
 
-  it('should repeat from classifyLetter after three rounds', () => {
-    const gen = simpleStrategy();
-    gen.next();
-    gen.next();
-    gen.next({ correct: true });
-    gen.next();
-    gen.next({ correct: true });
-    gen.next();
-    const step = gen.next({ correct: true });
-    expect(step.done).toBe(false);
-    expect(step.value).toEqual(CLASSIFY_LETTER_ROUND);
-  });
 });

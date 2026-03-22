@@ -14,7 +14,7 @@ export function* simpleStrategy(): Generator<
 
     yield {
       type: 'classifyLetter',
-      letters: ['А', 'Н', ],
+      letters: ['А', 'Н'],
     };
 
     yield; // receive result
