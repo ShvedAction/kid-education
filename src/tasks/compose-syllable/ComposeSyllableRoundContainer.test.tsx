@@ -133,46 +133,45 @@ describe('ComposeSyllable task', () => {
     describe('fill slots wrong order', () => {
       beforeEach(async () => {
         simulateFilledSlots(store, ['О', 'Н'], false);
-        await act(async () => {
-          await waitFor(() => {
-            expect(mockTTS.speak).toHaveBeenCalledWith(
-              'Это слог он. Попробуй ещё раз.'
-            );
-          });
+      });
+      it('should speak wrong feedback', async () => {
+        await waitFor(() => {
+          expect(mockTTS.speak).toHaveBeenCalledWith(
+            'Это слог'
+          );
+          expect(mockTTS.speak).toHaveBeenCalledWith(
+            'он', expect.any(Object)
+          );
+          expect(mockTTS.speak).toHaveBeenCalledWith(
+            'Составь слог:'
+          );
+          expect(mockTTS.speak).toHaveBeenCalledWith(
+            'но', expect.any(Object)
+          );
         });
-        await act(async () => {
-          await waitFor(() => {
+      });
+      it('should reset slots and pool', async () => {
+        await waitFor(async () => {
+          const state = store.getState();
+          expect(state.composeSyllable.slots).toEqual([null, null]);
+          expect(state.composeSyllable.pool).toHaveLength(2);
+        });
+      });
+      describe('then fill slots correct order', () => {
+        beforeEach(async () => {
+          await waitFor(async () => {
             const state = store.getState();
             expect(state.composeSyllable.slots).toEqual([null, null]);
             expect(state.composeSyllable.pool).toHaveLength(2);
           });
-        });
-      });
-      it('should speak wrong feedback', () => {
-        expect(mockTTS.speak).toHaveBeenCalledWith(
-          'Это слог он. Попробуй ещё раз.'
-        );
-      });
-      it('should reset slots and pool', () => {
-        const state = store.getState();
-        expect(state.composeSyllable.slots).toEqual([null, null]);
-        expect(state.composeSyllable.pool).toHaveLength(2);
-      });
-      describe('then fill slots correct order', () => {
-        beforeEach(async () => {
           simulateFilledSlots(store, ['Н', 'О'], true);
-          await act(async () => {
-            await waitFor(() => {
-              expect(mockTTS.speak).toHaveBeenCalledWith(
-                'Правильно! Молодец!'
-              );
-            });
-          });
         });
-        it('should speak correct feedback', () => {
-          expect(mockTTS.speak).toHaveBeenCalledWith(
-            'Правильно! Молодец!'
-          );
+        it('should speak correct feedback', async () => {
+          await waitFor(() => {
+            expect(mockTTS.speak).toHaveBeenCalledWith(
+              'Правильно! Молодец!'
+            );
+          });
         });
       });
     });

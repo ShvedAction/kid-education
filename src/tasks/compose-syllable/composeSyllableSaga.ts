@@ -27,20 +27,21 @@ function* playWrongFeedback(
   composed: string,
   context: SagaContext
 ) {
-  const { tts } = context;
-  try {
-    yield call(
-      [tts, tts.speak],
-      `Это слог ${composed.toLowerCase()}. Попробуй ещё раз.`
-    );
-  } catch {
-    // ignore
-  }
   const state: {
     session: {
       currentRound: { type: string; target: string; letters: string[] } | null;
     };
   } = yield select();
+  const target = state.session.currentRound?.target.toLowerCase() || '';
+  const { tts } = context;
+  try {
+    yield call([tts, tts.speak], 'Это слог');
+    yield call([tts, tts.speak], composed.toLowerCase(), { rate: SYLLABLE_RATE });
+    yield call([tts, tts.speak], 'Составь слог:');
+    yield call([tts, tts.speak], target.toLowerCase(), { rate: SYLLABLE_RATE });
+  } catch {
+    // ignore
+  }
   const round = state.session.currentRound;
   if (round?.type === 'composeSyllable') {
     yield put(
