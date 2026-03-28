@@ -1,6 +1,5 @@
-import type { ReadWordPictureRound } from './types';
 import type { PictureOption } from './types';
-import { splitWordIntoParts } from '@/tasks/read-word-picture/wordSyllables';
+import type { TWordPart } from './types';
 import { isVowel } from '@/domain/letters';
 import './ReadWordPictureRoundView.css';
 import { wordDB } from './word-db';
@@ -9,26 +8,29 @@ import { wordDB } from './word-db';
  * Пропсы презентационного компонента «Прочитай слово и выбери картинку».
  */
 export interface ReadWordPictureRoundViewProps {
-  round: ReadWordPictureRound;
   options: PictureOption[];
+  wordParts: TWordPart[];
+  showPictures: boolean;
   status: 'idle' | 'correct' | 'wrong';
   hasStarted: boolean;
   spoken: boolean;
   onStart: () => void;
-  onReadPart: (part: string) => void;
+  onReadPart: (index: number) => void;
   onChooseOption: (optionId: string) => void;
 }
 
-/** Рендер слова по слогам: каждая часть кликабельна, по клику озвучивается только этот слог. */
+/** Рендер слова по слогам из store: по порядку только активный слог, после — все. */
 function WordBySyllables({
-  word,
+  wordParts,
+  showPictures,
+  status,
   onReadPart,
 }: {
-  word: string;
-  onReadPart: (part: string) => void;
+  wordParts: TWordPart[];
+  showPictures: boolean;
+  status: 'idle' | 'correct' | 'wrong';
+  onReadPart: (index: number) => void;
 }) {
-  const parts = splitWordIntoParts(word);
-
   return (
     <span
       className="read-word-picture-word"
@@ -36,33 +38,38 @@ function WordBySyllables({
       role="group"
       aria-label="Слово по слогам"
     >
-      {parts.map((part, idx) => {
-        if (part.length === 2) {
+      {wordParts.map((part, idx) => {
+        const disabled =
+          status !== 'idle' ||
+          (!showPictures ? !part.current : false);
+        if (part.content.length === 2) {
           return (
             <button
-              key={`${idx}-${part}`}
+              key={`${idx}-${part.content}`}
               type="button"
               className="read-word-picture-syllable-chip"
-              onClick={() => onReadPart(part)}
-              aria-label={`Прочитать слог ${part}`}
+              disabled={disabled}
+              onClick={() => onReadPart(idx)}
+              aria-label={`Прочитать слог ${part.content}`}
               data-testid={`read-word-picture-syllable-${idx}`}
             >
-              <span className="letter-chip consonant">{part[0]}</span>
-              <span className="letter-chip vowel">{part[1]}</span>
+              <span className="letter-chip consonant">{part.content[0]}</span>
+              <span className="letter-chip vowel">{part.content[1]}</span>
             </button>
           );
         }
-        const cls = isVowel(part) ? 'vowel' : 'consonant';
+        const cls = isVowel(part.content) ? 'vowel' : 'consonant';
         return (
           <button
-            key={`${idx}-${part}`}
+            key={`${idx}-${part.content}`}
             type="button"
             className={`read-word-picture-letter-single letter-chip ${cls}`}
-            onClick={() => onReadPart(part)}
-            aria-label={`Прочитать ${part}`}
+            disabled={disabled}
+            onClick={() => onReadPart(idx)}
+            aria-label={`Прочитать ${part.content}`}
             data-testid={`read-word-picture-syllable-${idx}`}
           >
-            {part}
+            {part.content}
           </button>
         );
       })}
@@ -72,8 +79,9 @@ function WordBySyllables({
 
 /** Чистое представление раунда «Прочитай слово и выбери картинку». */
 export function ReadWordPictureRoundView({
-  round,
   options,
+  wordParts,
+  showPictures,
   status,
   hasStarted,
   spoken,
@@ -106,30 +114,37 @@ export function ReadWordPictureRoundView({
       data-testid="read-word-picture-round"
     >
       <div className="read-word-picture-word-wrap">
-        <WordBySyllables word={round.word} onReadPart={onReadPart} />
+        <WordBySyllables
+          wordParts={wordParts}
+          showPictures={showPictures}
+          status={status}
+          onReadPart={onReadPart}
+        />
       </div>
-      <div
-        className="read-word-picture-options"
-        role="group"
-        aria-label="Варианты картинок"
-        data-testid="read-word-picture-options"
-      >
-        {options.map((opt) => {
-          const word = wordDB.find((w) => w.id === opt.id);
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              className="read-word-picture-option"
-              onClick={() => onChooseOption(opt.id)}
-              disabled={status !== 'idle'}
-              data-testid={`read-word-picture-option-${opt.id}`}
-            >
-              {word?.url ? <img src={word.url} alt={opt.alt} /> : opt.alt}
-            </button>
-          )
-        })}
-      </div>
+      {showPictures && (
+        <div
+          className="read-word-picture-options"
+          role="group"
+          aria-label="Варианты картинок"
+          data-testid="read-word-picture-options"
+        >
+          {options.map((opt) => {
+            const word = wordDB.find((w) => w.id === opt.id);
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                className="read-word-picture-option"
+                onClick={() => onChooseOption(opt.id)}
+                disabled={status !== 'idle'}
+                data-testid={`read-word-picture-option-${opt.id}`}
+              >
+                {word?.url ? <img src={word.url} alt={opt.alt} /> : opt.alt}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {!spoken && (
         <p className="read-word-picture-hint" data-testid="read-word-picture-hint">
           Слушай задание…

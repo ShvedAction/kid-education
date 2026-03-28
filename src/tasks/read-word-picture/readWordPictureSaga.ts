@@ -3,9 +3,19 @@ import { SYLLABLE_RATE } from '@/domain/tts';
 import type { SagaContext } from '@/store/sagaContext';
 import type { ReadWordPictureRound } from '@/domain/types';
 import { sessionSlice } from '@/store/sessionSlice';
-import { readWordPictureSlice } from './readWordPictureSlice';
+import type { RootState } from '@/store/store';
+import {
+  readWordPictureSlice,
+  type ReadWordPictureState,
+} from './readWordPictureSlice';
 
 const INSTRUCTION = 'Прочитай слово и выбери картинку';
+
+function selectReadWordPicture(state: {
+  readWordPicture: ReadWordPictureState;
+}): ReadWordPictureState {
+  return state.readWordPicture;
+}
 
 function* playInstruction(context: SagaContext) {
   const { tts } = context;
@@ -40,54 +50,77 @@ function* playWrongFeedback(chosenId: string, context: SagaContext) {
   if (round?.type !== 'readWordPicture') return;
   const chosen = round.options.find((o) => o.id === chosenId);
   try {
-    yield call([tts, tts.speak], 'Нет. Выбери картинку к слову.');
+    yield call([tts, tts.speak], 'Неправильно. Ты выбрал не ту картинку.');
     if (chosen) {
       yield call([tts, tts.speak], chosen.alt.toLowerCase(), {
         rate: SYLLABLE_RATE,
       });
     }
-    yield put(readWordPictureSlice.actions.wrongDone());
   } catch {
-    yield put(readWordPictureSlice.actions.wrongDone());
+    // ignore
   }
 }
 
 /**
  * Сага «один раунд» задания «Прочитай слово и выбери картинку».
- * В цикле обрабатывает readPart (озвучка части), chooseWrong, chooseCorrect.
+ * Сначала слоги строго по порядку, затем картинки и повторное прослушивание слогов;
+ * при ошибке — фидбек, сброс слогов и перемешивание картинок.
  */
 export function* runReadWordPictureRound(context: SagaContext) {
   if (!context.autostart) {
     yield take(readWordPictureSlice.actions.startRound.type);
-  }else{
+  } else {
     yield put(readWordPictureSlice.actions.startRound());
   }
   yield* playInstruction(context);
 
-  while (!select(readWordPictureSlice.selectors.isAllPartsReaded)) {
-    const action: { type: string; payload?: number } = yield take(readWordPictureSlice.actions.readPart.type);
-    yield put(readWordPictureSlice.actions.markPart({ readed_ind: action.payload! }));
-  }
-
   while (true) {
-    const action: { type: string; payload?: string } = yield take([
-      readWordPictureSlice.actions.chooseCorrect.type,
-      readWordPictureSlice.actions.chooseWrong.type,
-      readWordPictureSlice.actions.readPart.type,
-    ]);
-    if (action.type === readWordPictureSlice.actions.readPart.type) {
-      yield* playPart(action.payload!, context);
-      continue;
-    }
-    if (action.type === readWordPictureSlice.actions.chooseCorrect.type) {
-      try {
-        yield call([context.tts, context.tts.speak], 'Правильно');
-      } catch {
-        // ignore
+    while (true) {
+      const showPictures = (yield select(
+        (s: RootState) => selectReadWordPicture(s).showPictures
+      )) as boolean;
+      if (showPictures) {
+        break;
       }
-      yield put(sessionSlice.actions.roundFinished({ correct: true }));
-      return;
+      const action: { type: string; payload?: number } = yield take(
+        readWordPictureSlice.actions.readPart.type
+      );
+      const index = action.payload as number;
+      const rwp: ReadWordPictureState = yield select(selectReadWordPicture);
+      const part = rwp.wordParts[index];
+      if (!part || (!rwp.showPictures && !part.readed)) {
+        continue;
+      }
+      yield* playPart(part.content, context);
     }
-    yield* playWrongFeedback(action.payload!, context);
+
+    while (true) {
+      const action: { type: string; payload?: string | number } = yield take([
+        readWordPictureSlice.actions.chooseCorrect.type,
+        readWordPictureSlice.actions.chooseWrong.type,
+        readWordPictureSlice.actions.readPart.type,
+      ]);
+      if (action.type === readWordPictureSlice.actions.readPart.type) {
+        const idx = action.payload as number;
+        const rwp: ReadWordPictureState = yield select(selectReadWordPicture);
+        const p = rwp.wordParts[idx];
+        if (p) {
+          yield* playPart(p.content, context);
+        }
+        continue;
+      }
+      if (action.type === readWordPictureSlice.actions.chooseCorrect.type) {
+        try {
+          yield call([context.tts, context.tts.speak], 'Правильно');
+        } catch {
+          // ignore
+        }
+        yield put(sessionSlice.actions.roundFinished({ correct: true }));
+        return;
+      }
+      yield* playWrongFeedback(action.payload as string, context);
+      yield put(readWordPictureSlice.actions.retryAfterWrong());
+      break;
+    }
   }
 }

@@ -37,9 +37,44 @@ function makeStoreWithRound(round: ReadWordPictureRound, tts: TTSProvider) {
   return storyStore;
 }
 
-describe('ReadWordPicture task', () => {
-  let mockTTS: TTSProvider;
+/** После «Начать»: дождаться слова, пройти слоги по порядку, дождаться блока картинок. */
+async function startAndCompleteSyllables() {
+  const startBtn = screen.getByTestId('read-word-picture-start');
+  act(() => {
+    fireEvent.click(startBtn);
+  });
+  await screen.findByTestId('read-word-picture-word');
+  expect(
+    screen.queryByTestId('read-word-picture-options')
+  ).not.toBeInTheDocument();
+  act(() => {
+    fireEvent.click(screen.getByTestId('read-word-picture-syllable-0'));
+  });
+  await act(async () => {
+    await waitFor(() => {
+      expect(mockTTS.speak).toHaveBeenCalledWith(
+        'ма',
+        expect.any(Object)
+      );
+    });
+  });
+  act(() => {
+    fireEvent.click(screen.getByTestId('read-word-picture-syllable-1'));
+  });
+  await act(async () => {
+    await waitFor(() => {
+      const maCalls = (mockTTS.speak as ReturnType<typeof vi.fn>).mock.calls.filter(
+        (c) => c[0] === 'ма'
+      );
+      expect(maCalls.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+  await screen.findByTestId('read-word-picture-options');
+}
 
+let mockTTS: TTSProvider;
+
+describe('ReadWordPicture task', () => {
   beforeEach(() => {
     mockTTS = {
       speak: vi.fn().mockResolvedValue(undefined),
@@ -62,16 +97,10 @@ describe('ReadWordPicture task', () => {
 
   describe('click start button', () => {
     beforeEach(async () => {
-      const startBtn = screen.getByTestId('read-word-picture-start');
-      act(() => {
-        fireEvent.click(startBtn);
-      });
-      await act(async () => {
-        await screen.findByTestId('read-word-picture-options');
-      });
+      await startAndCompleteSyllables();
     });
 
-    it('should render word and options', () => {
+    it('should render word and options after sequential syllables', () => {
       expect(screen.getByTestId('read-word-picture-word')).toBeInTheDocument();
       expect(screen.getByTestId('read-word-picture-options')).toBeInTheDocument();
     });
@@ -83,25 +112,14 @@ describe('ReadWordPicture task', () => {
     });
 
     describe('click syllable', () => {
-      beforeEach(async () => {
+      it('should speak syllable when replaying after sequence', async () => {
+        (mockTTS.speak as ReturnType<typeof vi.fn>).mockClear();
         act(() => {
           fireEvent.click(screen.getByTestId('read-word-picture-syllable-0'));
         });
-        await act(async () => {
-          await waitFor(() => {
-            expect(mockTTS.speak).toHaveBeenCalledWith(
-              'ма',
-              expect.any(Object)
-            );
-          });
+        await waitFor(() => {
+          expect(mockTTS.speak).toHaveBeenCalledWith('ма', expect.any(Object));
         });
-      });
-
-      it('should speak only that syllable', () => {
-        const maCalls = (mockTTS.speak as ReturnType<typeof vi.fn>).mock.calls.filter(
-          (c) => c[0] === 'ма'
-        );
-        expect(maCalls.length).toBeGreaterThanOrEqual(1);
       });
     });
 
@@ -129,27 +147,42 @@ describe('ReadWordPicture task', () => {
         });
         await act(async () => {
           await waitFor(() => {
-            expect(
-              screen.queryByTestId('read-word-picture-option-papa')
-            ).not.toBeInTheDocument();
+            expect(mockTTS.speak).toHaveBeenCalledWith(
+              'Неправильно. Ты выбрал не ту картинку.'
+            );
           });
         });
       });
 
       it('should speak wrong feedback', () => {
         expect(mockTTS.speak).toHaveBeenCalledWith(
-          'Нет. Выбери картинку к слову.'
+          'Неправильно. Ты выбрал не ту картинку.'
         );
       });
 
-      it('should remove wrong option', () => {
+      it('should hide options and keep all picture ids in round', () => {
         expect(
-          screen.queryByTestId('read-word-picture-option-papa')
+          screen.queryByTestId('read-word-picture-options')
         ).not.toBeInTheDocument();
       });
 
-      describe('then click correct option', () => {
+      describe('then complete syllables and click correct option', () => {
         beforeEach(async () => {
+          act(() => {
+            fireEvent.click(screen.getByTestId('read-word-picture-syllable-0'));
+          });
+          await act(async () => {
+            await waitFor(() => {
+              expect(mockTTS.speak).toHaveBeenCalledWith(
+                'ма',
+                expect.any(Object)
+              );
+            });
+          });
+          act(() => {
+            fireEvent.click(screen.getByTestId('read-word-picture-syllable-1'));
+          });
+          await screen.findByTestId('read-word-picture-options');
           act(() => {
             fireEvent.click(screen.getByTestId('read-word-picture-option-mama'));
           });
