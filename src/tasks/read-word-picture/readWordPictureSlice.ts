@@ -1,7 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { ReadWordPictureRound } from './types';
+import type { ReadWordPictureRound, TWordPart } from './types';
 import type { PictureOption } from './types';
+import { splitWordIntoParts } from './wordSyllables';
 
 /**
  * Состояние задания «Прочитай слово и выбери картинку» в store (ключ `readWordPicture`).
@@ -16,6 +17,8 @@ export interface ReadWordPictureState {
   status: 'idle' | 'correct' | 'wrong';
   hasStarted: boolean;
   spoken: boolean;
+  wordParts: TWordPart[];
+  targetWord: string;
 }
 
 const initialState: ReadWordPictureState = {
@@ -23,6 +26,8 @@ const initialState: ReadWordPictureState = {
   status: 'idle',
   hasStarted: false,
   spoken: false,
+  wordParts: [],
+  targetWord: '',
 };
 
 export const readWordPictureSlice = createSlice({
@@ -36,6 +41,12 @@ export const readWordPictureSlice = createSlice({
         status: 'idle',
         hasStarted: false,
         spoken: false,
+        targetWord: action.payload.word,
+        wordParts: splitWordIntoParts(action.payload.word).map((prt, index) => ({
+          content: prt,
+          readed: false,
+          current: index == 0,
+        }))
       };
     },
     /** Пользователь нажал «Начать»; сага озвучивает инструкцию, затем instructionDone. */
@@ -48,7 +59,18 @@ export const readWordPictureSlice = createSlice({
       state.spoken = true;
     },
     /** Пользователь нажал на слог; сага озвучивает только этот слог. Payload — текст слога (части). */
-    readPart(_state, _action: PayloadAction<string>) {},
+    readPart(_state, _action: PayloadAction<number>) { },
+    markPart(state, {payload: {readed_ind, current_ind}}: PayloadAction<{ readed_ind: number, current_ind?: number }>) {
+      state.wordParts = state.wordParts.map((part, ind) => {
+        if (ind === readed_ind){
+          return {...part, readed: true};
+        }
+        if (ind === current_ind){
+          return {...part, current: true};
+        }
+        return part;
+      });
+    },
     /** Выбран неверный вариант. Payload — id варианта; сага озвучивает фидбек и диспатчит wrongDone. */
     chooseWrong(state, action: PayloadAction<string>) {
       state.options = state.options.filter((o) => o.id !== action.payload);
@@ -63,6 +85,11 @@ export const readWordPictureSlice = createSlice({
       state.status = 'correct';
     },
   },
+  selectors: {
+    isAllPartsReaded: (state) => {
+      return state.wordParts.every(part => part.readed);
+    }
+  }
 });
 
 export const {

@@ -64,6 +64,11 @@ export function* runReadWordPictureRound(context: SagaContext) {
   }
   yield* playInstruction(context);
 
+  while (!select(readWordPictureSlice.selectors.isAllPartsReaded)) {
+    const action: { type: string; payload?: number } = yield take(readWordPictureSlice.actions.readPart.type);
+    yield put(readWordPictureSlice.actions.markPart({ readed_ind: action.payload! }));
+  }
+
   while (true) {
     const action: { type: string; payload?: string } = yield take([
       readWordPictureSlice.actions.chooseCorrect.type,

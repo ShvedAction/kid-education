@@ -31,3 +31,9 @@ export interface ReadWordPictureRound {
   /** id правильного варианта (соответствует слову) */
   correctId: string;
 }
+
+export type TWordPart = {
+  content: string;
+  readed: boolean;
+  current: boolean;
+}
