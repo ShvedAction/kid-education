@@ -1,4 +1,5 @@
 import type { Round, RoundResult } from '@/domain/types';
+import { randomReadWordPictureRound } from '@/tasks/read-word-picture/word-db';
 
 
 /**
@@ -88,5 +89,15 @@ export function* simpleStrategy(): Generator<
       letters: ['Н', 'О', 'А'],
     };
     yield; // receive result
+  }
+}
+
+export function* simpleStrategyReadWordPicture(): Generator<
+  Round | undefined,
+  void,
+  RoundResult | undefined
+> {
+  while (true) {
+    yield randomReadWordPictureRound();
   }
 }

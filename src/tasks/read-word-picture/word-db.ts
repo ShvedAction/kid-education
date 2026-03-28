@@ -1,4 +1,37 @@
-import { TWordExample } from "./types";
+import type { ReadWordPictureRound, TWordExample } from './types';
+
+function shuffle<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = copy[i]!;
+    copy[i] = copy[j]!;
+    copy[j] = t;
+  }
+  return copy;
+}
+
+function toPictureOption(w: TWordExample) {
+  return { id: w.id, alt: w.alt, url: w.url };
+}
+
+/**
+ * Случайный раунд readWordPicture: одно слово из базы и ровно три варианта картинок
+ * (целевое слово + два случайных отличных от него), порядок вариантов перемешан.
+ */
+export function randomReadWordPictureRound(): ReadWordPictureRound {
+  const target = wordDB[Math.floor(Math.random() * wordDB.length)]!;
+  const pool = wordDB.filter((w) => w.id !== target.id);
+  const pick1 = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]!;
+  const pick2 = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]!;
+  const options = shuffle([target, pick1, pick2]).map(toPictureOption);
+  return {
+    type: 'readWordPicture',
+    word: target.word,
+    correctId: target.id,
+    options,
+  };
+}
 
 export const wordDB: TWordExample[] = [
   {

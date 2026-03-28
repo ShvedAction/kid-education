@@ -13,7 +13,7 @@ import { pairSyllableSlice } from '@/tasks/pair-syllable';
 import { readWordPictureSlice } from '@/tasks/read-word-picture';
 import { rootSaga } from './sagas/rootSaga';
 import type { TTSProvider } from '@/domain/tts';
-import { simpleStrategy } from '@/strategies/simple-scenario';
+import { simpleStrategy, simpleStrategyReadWordPicture } from '@/strategies/simple-scenario';
 
 export { createRound } from './createRound';
 
@@ -84,7 +84,7 @@ export function runSagas(tts: TTSProvider) {
   sagaMiddleware.run(rootSaga, {
     tts,
     store,
-    strategy: simpleStrategy(),
+    strategy: simpleStrategyReadWordPicture(),
     autostart: false,
   });
 }
