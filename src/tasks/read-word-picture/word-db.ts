@@ -24,7 +24,8 @@ export function randomReadWordPictureRound(): ReadWordPictureRound {
   const pool = wordDB.filter((w) => w.id !== target.id);
   const pick1 = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]!;
   const pick2 = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]!;
-  const options = shuffle([target, pick1, pick2]).map(toPictureOption);
+  const pick3 = pool.splice(Math.floor(Math.random() * pool.length), 1)[0]!;
+  const options = shuffle([target, pick1, pick2, pick3]).map(toPictureOption);
   return {
     type: 'readWordPicture',
     word: target.word,
